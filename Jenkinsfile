@@ -29,6 +29,20 @@ pipeline {
       }
     }
 
+    stage('Test E2E (Cypress)') {
+      steps {
+        dir('frontend') {
+          sh 'npm ci'
+          sh 'npm run test:e2e'
+        }
+      }
+      post {
+        always {
+          junit 'frontend/cypress/results/*.xml'
+        }
+      }
+    }
+
     stage('Analyse SonarQube') {
       steps {
         withCredentials([string(credentialsId: 'sonarqube-token', variable: 'SONAR_TOKEN')]) {
