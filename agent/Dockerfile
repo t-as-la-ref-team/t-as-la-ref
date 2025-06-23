@@ -11,6 +11,19 @@ RUN apt-get update && apt-get install -y \
     npm \
     unzip \
     openjdk-17-jdk \
+    xvfb \
+    libgtk-3-0 \
+    libnss3 \
+    libasound2 \
+    libxss1 \
+    libx11-xcb1 \
+    libxcomposite1 \
+    libxcursor1 \
+    libxdamage1 \
+    libxrandr2 \
+    libgbm-dev \
+    libxshmfence-dev \
+    libglu1-mesa \
  && apt-get clean
 
 # Set Java 17 as default
