@@ -1,10 +1,5 @@
 pipeline {
-  agent {
-    docker {
-      image 't-as-la-ref-agent:latest'
-      args '-v /var/run/docker.sock:/var/run/docker.sock'
-    }
-  }
+  agent any
 
   environment {
     DISCORD_WEBHOOK_GIT = credentials('discord-webhook-git')
