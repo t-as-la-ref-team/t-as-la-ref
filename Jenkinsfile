@@ -1,28 +1,29 @@
 pipeline {
-  agent any
+  agent {
+    docker {
+      image 't-as-la-ref-agent:latest'
+      args '-v /var/run/docker.sock:/var/run/docker.sock'
+    }
+  }
 
-  triggers {
-    githubPush()
+  environment {
+    DISCORD_WEBHOOK_GIT = credentials('discord-webhook-git')
+    DISCORD_WEBHOOK_TEST = credentials('discord-webhook-test')
+    DISCORD_WEBHOOK_SONAR = credentials('discord-webhook-sonar')
   }
 
   stages {
-
     stage('Notifier Discord') {
       steps {
         withCredentials([string(credentialsId: 'discord-webhook-git', variable: 'DISCORD_WEBHOOK_GIT')]) {
           script {
-            def branchName = env.BRANCH_NAME ?: env.GIT_BRANCH ?: "inconnue"
-            def auteur = sh(script: "git log -1 --pretty=format:'%an'", returnStdout: true).trim()
-            def message = sh(script: "git log -1 --pretty=format:'%s'", returnStdout: true).trim()
-
-            def payload = """{
-              "content": "📢 Nouveau **push** détecté sur la branche `${branchName}` ! 🚀\\n👤 **Auteur** : ${auteur}\\n📝 **Commit** : ${message}"
-            }"""
+            def author = sh(script: "git log -1 --pretty=format:%an", returnStdout: true).trim()
+            def message = sh(script: "git log -1 --pretty=format:%s", returnStdout: true).trim()
 
             sh """
-              curl -H "Content-Type: application/json" -X POST \\
-              -d '${payload}' \\
-              $DISCORD_WEBHOOK_GIT
+              curl -H Content-Type:application/json -X POST -d '{
+                "content": "📢 Nouveau **push** détecté sur la branche `origin/dev` ! 🚀\\n👤 **Auteur** : ${author}\\n📝 **Commit** : ${message}"
+              }' ${DISCORD_WEBHOOK_GIT}
             """
           }
         }
@@ -33,44 +34,58 @@ pipeline {
       steps {
         dir('frontend') {
           sh 'npm ci'
-          sh 'npm run test:e2e'
+
+          script {
+            try {
+              sh 'npm run test:e2e'
+            } catch (e) {
+              currentBuild.result = 'UNSTABLE'
+              throw e // pour déclencher "failure"
+            }
+          }
         }
       }
+
       post {
         always {
           junit 'frontend/cypress/results/*.xml'
+        }
+        unsuccessful {
+          withCredentials([string(credentialsId: 'discord-webhook-test', variable: 'DISCORD_WEBHOOK_TEST')]) {
+            sh """
+              curl -H Content-Type:application/json -X POST -d '{
+                "content": "❌ **Tests Cypress échoués !**\\nVoir les résultats dans Jenkins pour plus d’infos."
+              }' ${DISCORD_WEBHOOK_TEST}
+            """
+          }
         }
       }
     }
 
     stage('Analyse SonarQube') {
+      when {
+        expression { currentBuild.result == null || currentBuild.result == 'SUCCESS' }
+      }
       steps {
-        withCredentials([string(credentialsId: 'sonarqube-token', variable: 'SONAR_TOKEN')]) {
-          sh '''
-            sonar-scanner \
-              -Dsonar.projectKey=t-as-la-ref \
-              -Dsonar.sources=. \
-              -Dsonar.host.url=http://212.83.130.69:9000 \
-              -Dsonar.token=$SONAR_TOKEN
-          '''
+        withSonarQubeEnv('sonarqube-server') {
+          dir('frontend') {
+            sh 'sonar-scanner'
+          }
         }
       }
     }
 
     stage('Notification Analyse') {
+      when {
+        expression { currentBuild.result == null || currentBuild.result == 'SUCCESS' }
+      }
       steps {
         withCredentials([string(credentialsId: 'discord-webhook-sonar', variable: 'DISCORD_WEBHOOK_SONAR')]) {
-          script {
-            def payload = """{
-              "content": "✅ **Analyse SonarQube terminée avec succès !** 🔍\\n📊 Dashboard : http://212.83.130.69:9000/dashboard?id=t-as-la-ref"
-            }"""
-
-            sh """
-              curl -H "Content-Type: application/json" -X POST \\
-              -d '${payload}' \\
-              $DISCORD_WEBHOOK_SONAR
-            """
-          }
+          sh """
+            curl -H Content-Type:application/json -X POST -d '{
+              "content": "📊 Analyse **SonarQube** terminée avec succès. 🔍"
+            }' ${DISCORD_WEBHOOK_SONAR}
+          """
         }
       }
     }
