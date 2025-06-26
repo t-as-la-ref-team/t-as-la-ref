@@ -57,7 +57,7 @@ pipeline {
         expression { currentBuild.result == null || currentBuild.result == 'SUCCESS' }
       }
       steps {
-        withSonarQubeEnv('sonarqube-server') {
+        withSonarQubeEnv('SonarQube') {
           dir('frontend') {
             sh 'sonar-scanner'
           }
