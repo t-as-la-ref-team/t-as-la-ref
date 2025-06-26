@@ -1,5 +1,10 @@
 pipeline {
-  agent any
+  agent {
+    docker {
+      image 'node:20'
+      args '-u root:root'
+    }
+  }
   
   environment {
     DISCORD_WEBHOOK_GIT    = credentials('discord-webhook-git')
