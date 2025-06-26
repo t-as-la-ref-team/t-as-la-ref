@@ -24,38 +24,41 @@ pipeline {
     }
 
     stage('Test E2E (Cypress)') {
-      steps {
-        dir('frontend') {
-          sh 'npm ci'
-          script {
-            def exitCode = sh(script: 'npm run test:e2e', returnStatus: true)
-            if (exitCode != 0) {
-              currentBuild.result = 'UNSTABLE'
-            }
+    steps {
+      dir('frontend') {
+        sh 'npm ci'
+        script {
+          try {
+            sh 'npm run test:e2e'
+          } catch (err) {
+            currentBuild.result = 'UNSTABLE'
+            echo '⚠️ Cypress a échoué, le build sera marqué comme instable.'
           }
         }
       }
-      post {
-        always {
-          junit 'frontend/cypress/results/*.xml'
-        }
-        unstable {
-          echo '⚠️ Build unstable en raison des tests Cypress'
-          sh """
-            curl -H "Content-Type:application/json" -X POST -d '{
-              "content": "⚠️ **Build UNSTABLE**: Certains tests Cypress ont échoué. Voir les résultats dans Jenkins pour plus d’informations."
-            }' "${DISCORD_WEBHOOK_TEST}"
-          """
-        }
-        failure {
-          sh """
-            curl -H "Content-Type:application/json" -X POST -d '{
-              "content": "❌ **Tests Cypress échoués !**\\nVoir les résultats dans Jenkins pour plus d’informations."
-            }' "${DISCORD_WEBHOOK_TEST}"
-          """
-        }
+    }
+    post {
+      always {
+        junit 'frontend/cypress/results/*.xml'
+      }
+      unstable {
+        echo '⚠️ Build unstable en raison des tests Cypress'
+        sh """
+          curl -H "Content-Type:application/json" -X POST -d '{
+            "content": "⚠️ **Build UNSTABLE**: Certains tests Cypress ont échoué. Voir les résultats dans Jenkins pour plus d’informations."
+          }' "${DISCORD_WEBHOOK_TEST}"
+        """
+      }
+      failure {
+        sh """
+          curl -H "Content-Type:application/json" -X POST -d '{
+            "content": "❌ **Tests Cypress échoués !**\\nVoir les résultats dans Jenkins pour plus d’informations."
+          }' "${DISCORD_WEBHOOK_TEST}"
+        """
       }
     }
+  }
+
 
     stage('Analyse SonarQube') {
       when {
