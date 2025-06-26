@@ -72,20 +72,31 @@ pipeline {
       }
     }
     
-    stage('Analyse SonarQube') {
-      when {
-        expression { currentBuild.result == null || currentBuild.result == 'SUCCESS' }
-      }
+    // stage('Analyse SonarQube') {
+    //   when {
+    //     expression { currentBuild.result == null || currentBuild.result == 'SUCCESS' }
+    //   }
+    //   steps {
+    //     withCredentials([string(credentialsId: 'sonarqube-token', variable: 'SONAR_TOKEN')]) {
+    //       sh '''
+    //         sonar-scanner \
+    //           -Dsonar.projectKey=t-as-la-ref \
+    //           -Dsonar.sources=. \
+    //           -Dsonar.host.url=http://212.83.130.69:9000 \
+    //           -Dsonar.token=$SONAR_TOKEN
+    //       '''
+    //     }
+    //   }
+    // }
+
+    stage('Analyse SonarQube - DÉSACTIVÉ') {
       steps {
-        withCredentials([string(credentialsId: 'sonarqube-token', variable: 'SONAR_TOKEN')]) {
-          sh '''
-            sonar-scanner \
-              -Dsonar.projectKey=t-as-la-ref \
-              -Dsonar.sources=. \
-              -Dsonar.host.url=http://212.83.130.69:9000 \
-              -Dsonar.token=$SONAR_TOKEN
-          '''
-        }
+        echo "Analyse SonarQube temporairement désactivée - sonar-scanner non disponible sur le serveur Jenkins"
+        sh """
+          curl -H "Content-Type:application/json" -X POST -d '{
+            "content": "⚠️ **Analyse SonarQube ignorée** - Scanner non disponible"
+          }' "${DISCORD_WEBHOOK_SONAR}"
+        """
       }
     }
 
