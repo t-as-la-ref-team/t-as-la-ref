@@ -36,11 +36,9 @@ pipeline {
         }
       }
       post {
-        // Publier les rapports de tests, toujours
         always {
           junit 'frontend/cypress/results/*.xml'
         }
-        // En cas de build instable (tests échoués partiellement)
         unstable {
           echo '⚠️ Build unstable en raison des tests Cypress'
           sh """
@@ -49,7 +47,6 @@ pipeline {
             }' "${DISCORD_WEBHOOK_TEST}"
           """
         }
-        // En cas d’échec total des tests
         failure {
           sh """
             curl -H "Content-Type:application/json" -X POST -d '{
