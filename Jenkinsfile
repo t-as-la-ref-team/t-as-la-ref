@@ -3,24 +3,22 @@ pipeline {
 
   environment {
     DISCORD_WEBHOOK_GIT = credentials('discord-webhook-git')
-    DISCORD_WEBHOOK_TEST = credentials('discord-webhook-test')
     DISCORD_WEBHOOK_SONAR = credentials('discord-webhook-sonar')
+    DISCORD_WEBHOOK_TEST = credentials('discord-webhook-test') // ← BIEN DÉCLARÉ ICI
   }
 
   stages {
     stage('Notifier Discord') {
       steps {
-        withCredentials([string(credentialsId: 'discord-webhook-git', variable: 'DISCORD_WEBHOOK_GIT')]) {
-          script {
-            def author = sh(script: "git log -1 --pretty=format:%an", returnStdout: true).trim()
-            def message = sh(script: "git log -1 --pretty=format:%s", returnStdout: true).trim()
+        script {
+          def author = sh(script: "git log -1 --pretty=format:%an", returnStdout: true).trim()
+          def message = sh(script: "git log -1 --pretty=format:%s", returnStdout: true).trim()
 
-            sh """
-              curl -H Content-Type:application/json -X POST -d '{
-                "content": "📢 Nouveau **push** détecté sur la branche `origin/dev` ! 🚀\\n👤 **Auteur** : ${author}\\n📝 **Commit** : ${message}"
-              }' ${DISCORD_WEBHOOK_GIT}
-            """
-          }
+          sh """
+            curl -H Content-Type:application/json -X POST -d '{
+              "content": "📢 Nouveau **push** détecté sur la branche `origin/dev` ! 🚀\\n👤 **Auteur** : ${author}\\n📝 **Commit** : ${message}"
+            }' "${DISCORD_WEBHOOK_GIT}"
+          """
         }
       }
     }
@@ -35,7 +33,7 @@ pipeline {
               sh 'npm run test:e2e'
             } catch (e) {
               currentBuild.result = 'UNSTABLE'
-              throw e // pour déclencher "failure"
+              throw e
             }
           }
         }
@@ -46,13 +44,12 @@ pipeline {
           junit 'frontend/cypress/results/*.xml'
         }
         unsuccessful {
-          withCredentials([string(credentialsId: 'discord-webhook-test', variable: 'DISCORD_WEBHOOK_TEST')]) {
-            sh """
-              curl -H Content-Type:application/json -X POST -d '{
-                "content": "❌ **Tests Cypress échoués !**\\nVoir les résultats dans Jenkins pour plus d’infos."
-              }' ${DISCORD_WEBHOOK_TEST}
-            """
-          }
+          // PAS besoin de withCredentials si déjà dans `environment`
+          sh """
+            curl -H Content-Type:application/json -X POST -d '{
+              "content": "❌ **Tests Cypress échoués !**\\nVoir les résultats dans Jenkins pour plus d’infos."
+            }' "${DISCORD_WEBHOOK_TEST}"
+          """
         }
       }
     }
@@ -75,13 +72,11 @@ pipeline {
         expression { currentBuild.result == null || currentBuild.result == 'SUCCESS' }
       }
       steps {
-        withCredentials([string(credentialsId: 'discord-webhook-sonar', variable: 'DISCORD_WEBHOOK_SONAR')]) {
-          sh """
-            curl -H Content-Type:application/json -X POST -d '{
-              "content": "📊 Analyse **SonarQube** terminée avec succès. 🔍"
-            }' ${DISCORD_WEBHOOK_SONAR}
-          """
-        }
+        sh """
+          curl -H Content-Type:application/json -X POST -d '{
+            "content": "📊 Analyse **SonarQube** terminée avec succès. 🔍"
+          }' "${DISCORD_WEBHOOK_SONAR}"
+        """
       }
     }
   }
