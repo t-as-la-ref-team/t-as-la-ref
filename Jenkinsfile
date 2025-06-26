@@ -34,6 +34,11 @@ pipeline {
               error('Fin du build suite à des erreurs Cypress')
             } else {
               echo '✅ Tests Cypress passés avec succès.'
+              sh """
+                curl -H "Content-Type:application/json" -X POST -d '{
+                  "content": "✅ Tests Cypress passés avec succès !"
+                }' "${DISCORD_WEBHOOK_TEST}"
+              """
             }
           }
         }
@@ -41,14 +46,6 @@ pipeline {
       post {
         always {
           junit testResults: 'frontend/cypress/results/*.xml', allowEmptyResults: true, skipMarkingBuildUnstable: true
-        }
-        success {
-          echo 'Bloc success exécuté'
-          sh """
-            curl -H "Content-Type:application/json" -X POST -d '{
-              "content": "✅ Tests Cypress passés avec succès !"
-            }' "${DISCORD_WEBHOOK_TEST}"
-          """
         }
         failure {
           sh """
