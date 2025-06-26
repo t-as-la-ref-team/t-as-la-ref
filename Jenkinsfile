@@ -13,10 +13,11 @@ pipeline {
         script {
           def author  = sh(script: "git log -1 --pretty=format:%an", returnStdout: true).trim()
           def message = sh(script: "git log -1 --pretty=format:%s", returnStdout: true).trim()
+          def branch = env.GIT_BRANCH ?: sh(script: "git rev-parse --abbrev-ref HEAD", returnStdout: true).trim()
 
           sh """
             curl -H "Content-Type:application/json" -X POST -d '{
-              "content": "📢 Nouveau **push** détecté sur la branche `origin/dev` ! 🚀\\n👤 **Auteur** : ${author}\\n📝 **Commit** : ${message}"
+              "content": "📢 Nouveau **push** détecté sur la branche `${branch}` ! 🚀\\n👤 **Auteur** : ${author}\\n📝 **Commit** : ${message}"
             }' "${DISCORD_WEBHOOK_GIT}"
           """
         }
