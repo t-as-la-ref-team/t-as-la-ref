@@ -42,6 +42,13 @@ pipeline {
         always {
           junit testResults: 'frontend/cypress/results/*.xml', allowEmptyResults: true, skipMarkingBuildUnstable: true
         }
+        success {
+          sh """
+            curl -H "Content-Type:application/json" -X POST -d '{
+              "content": "✅ **Tests Cypress passés avec succès !**"
+            }' "${DISCORD_WEBHOOK_TEST}"
+          """
+        }
         failure {
           sh """
             curl -H "Content-Type:application/json" -X POST -d '{
