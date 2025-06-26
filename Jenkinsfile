@@ -23,16 +23,18 @@ pipeline {
       }
     }
 
-    stage('Test E2E (Cypress)') {
+  stage('Test E2E (Cypress)') {
     steps {
       dir('frontend') {
         sh 'npm ci'
         script {
-          try {
-            sh 'npm run test:e2e'
-          } catch (err) {
+          def exitCode = sh(script: 'npm run test:e2e', returnStatus: true)
+          if (exitCode != 0) {
+            echo '❌ Tests Cypress échoués.'
             currentBuild.result = 'UNSTABLE'
-            echo '⚠️ Cypress a échoué, le build sera marqué comme instable.'
+            error('Fin du build suite à des erreurs Cypress')
+          } else {
+            echo '✅ Tests Cypress passés avec succès.'
           }
         }
       }
@@ -40,14 +42,6 @@ pipeline {
     post {
       always {
         junit 'frontend/cypress/results/*.xml'
-      }
-      unstable {
-        echo '⚠️ Build unstable en raison des tests Cypress'
-        sh """
-          curl -H "Content-Type:application/json" -X POST -d '{
-            "content": "⚠️ **Build UNSTABLE**: Certains tests Cypress ont échoué. Voir les résultats dans Jenkins pour plus d’informations."
-          }' "${DISCORD_WEBHOOK_TEST}"
-        """
       }
       failure {
         sh """
@@ -58,6 +52,7 @@ pipeline {
       }
     }
   }
+
 
 
     stage('Analyse SonarQube') {
