@@ -1,6 +1,6 @@
 pipeline {
   agent any
-
+  
   environment {
     DISCORD_WEBHOOK_GIT    = credentials('discord-webhook-git')
     DISCORD_WEBHOOK_TEST   = credentials('discord-webhook-test')
@@ -48,19 +48,22 @@ pipeline {
               "content": "❌ **Tests Cypress échoués !**\\nVoir les résultats dans Jenkins pour plus d’informations."
             }' "${DISCORD_WEBHOOK_TEST}"
           """
-        }
-      }
+        }      }
     }
-
+    
     stage('Analyse SonarQube') {
       when {
         expression { currentBuild.result == null || currentBuild.result == 'SUCCESS' }
       }
       steps {
-        withSonarQubeEnv('SonarQube') {
-          dir('frontend') {
-            sh 'sonar-scanner'
-          }
+        withCredentials([string(credentialsId: 'sonarqube-token', variable: 'SONAR_TOKEN')]) {
+          sh '''
+            sonar-scanner \
+              -Dsonar.projectKey=t-as-la-ref \
+              -Dsonar.sources=. \
+              -Dsonar.host.url=http://212.83.130.69:9000 \
+              -Dsonar.token=$SONAR_TOKEN
+          '''
         }
       }
     }
