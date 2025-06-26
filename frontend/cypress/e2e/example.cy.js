@@ -3,6 +3,6 @@ describe("Page d’accueil", () => {
     cy.visit('/');
     cy.contains("T'as la ref");
     cy.contains('Connexion');
-    cy.contains('Se connecteee');
+    cy.contains('Se connecter');
   });
 });
