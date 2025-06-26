@@ -27,14 +27,10 @@ pipeline {
       steps {
         dir('frontend') {
           sh 'npm ci'
-
           script {
-            try {
-              sh 'npm run test:e2e'
-            } catch (e) {
-              // Marquer le build comme unstable en cas d'erreur dans les tests Cypress
+            def exitCode = sh(script: 'npm run test:e2e', returnStatus: true)
+            if (exitCode != 0) {
               currentBuild.result = 'UNSTABLE'
-              throw e
             }
           }
         }
